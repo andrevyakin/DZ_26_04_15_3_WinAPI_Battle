@@ -2,6 +2,7 @@
 #include<tchar.h>
 #include<cstdlib>
 #include<string>
+#include<ctime>
 
 #define ID_combo1 1001
 #define ID_combo2 1001
@@ -10,15 +11,18 @@
 #define ID_list2 1021
 #define ID_edit1 1030
 #define ID_edit2 1031
+#define ID_edit3 1032
+#define ID_edit4 1034
 
 static TCHAR WindowsClass[] = L"win32app";
 static TCHAR Title[] = L"БИТВА ТИТАНОВ";
 HINSTANCE hinst;
 RECT desktop, cr;
 std::wstring str1, str2, res;
-bool move = true;				//Чей ход
+bool move = true;										//Чей ход
+int kick[2], block, health[2] = { 100, 100 };			//Удар, блок, здоровье.
 
-HWND combo1, combo2, button1, list1, list2, edit1, edit2;
+HWND combo1, combo2, button1, list1, list2, edit1, edit2, edit3, edit4;
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -99,6 +103,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						   LRESULT cur_sel1 = SendMessage(combo1, CB_GETCURSEL, 0, 0);
 						   LRESULT combo1_text = SendMessage(combo1, CB_GETLBTEXT, cur_sel1, (LPARAM)str1.c_str());
 						   res = str1.c_str();
+						   kick[0] = cur_sel1;
 					   }
 
 					   if (LOWORD(wParam) == ID_combo2 && HIWORD(wParam) == CBN_SELENDOK) {
@@ -107,6 +112,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						   LRESULT combo2_text = SendMessage(combo2, CB_GETLBTEXT, cur_sel2, (LPARAM)str2.c_str());
 						   res += L" ";
 						   res += str2.c_str();
+						   kick[1] = cur_sel2;
 					   }
 
 	}
@@ -123,18 +129,109 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					MessageBox(hWnd, L"Не выбрано куда бить!", L"Ошибка!", MB_OK);
 				else{
 					move = false;
-					SendMessage(list1, LB_ADDSTRING, 0, (LPARAM)res.c_str());														//показать текст в списке
-					ShowWindow(combo1, SW_HIDE);																					//скрыть верхний комбобокс
-					GetClientRect(hWnd, &cr);																						//узнать параметры клиенсткого окна
-					SetWindowPos(combo2, HWND_TOP, cr.right / 7, cr.bottom / 2.5, cr.right / 5, cr.bottom / 2, SWP_SHOWWINDOW);		//сдвинуть нижний комбобокс
-					SendMessage(combo2, WM_SETTEXT, 0, (LPARAM)L"Блокировать удар");												//изменить текст в комбобоксе (подсказку)
-					SendMessage(button1, WM_SETTEXT, 0, (LPARAM)L"Блокировать");													//изменить текс на кнопке
+					SendMessage(list1, LB_ADDSTRING, 0, (LPARAM)res.c_str());																	//показать текст в списке
+					ShowWindow(combo1, SW_HIDE);																								//скрыть верхний комбобокс
+					GetClientRect(hWnd, &cr);																									//узнать параметры клиенсткого окна
+					SetWindowPos(combo2, HWND_TOP, cr.right / 9 * 3.75, cr.bottom / 2.5, cr.right / 9 * 1.5, cr.bottom, SWP_SHOWWINDOW);		//сдвинуть нижний комбобокс
+					SendMessage(combo2, WM_SETTEXT, 0, (LPARAM)L"Блокировать удар");															//изменить текст в комбобоксе (подсказку)
+					SendMessage(button1, WM_SETTEXT, 0, (LPARAM)L"Блокировать");																//изменить текс на кнопке
 
+					//Блокирование удара компом
+					srand((unsigned)time(NULL));
+					int block = rand() % 3;
+
+					if (kick[1] == block) //Удар блокирован
+					{
+						SendMessage(list2, LB_ADDSTRING, 0, (LPARAM)L"Удар блокирован");
+						if (kick[0])
+						{
+							health[0] -= 5;
+							wchar_t temp[20] = L"Здоровье ", tempInt[10];
+							_itow_s(health[0], tempInt, 10);
+							wcscat_s(temp, tempInt);
+							wcscat_s(temp, L"%");
+							SendMessage(edit3, WM_SETTEXT, 0, (LPARAM)temp);
+						}
+					}
+					else
+					{
+						SendMessage(list2, LB_ADDSTRING, 0, (LPARAM)L"Удар пропущен");
+						health[1] -= kick[0] ? 15 : 10;
+						wchar_t temp[20] = L"Здоровье ", tempInt[10];
+						_itow_s(health[1], tempInt, 10);
+						wcscat_s(temp, tempInt);
+						wcscat_s(temp, L"%");
+						SendMessage(edit4, WM_SETTEXT, 0, (LPARAM)temp);
+ 					}
 				}
 			}
 			else{	//ход компьютера
 				move = true;
+				kick[0] = rand() % 2;
+				kick[1] = rand() % 3;
+
+				if (kick[0])
+					res = L"Ногой ";
+				else
+					res = L"Рукой ";
+
+				switch (kick[1])
+				{
+				case 0:
+					res += L"в голову";
+					break;
+				case 1:
+					res += L"в грудь";
+					break;
+				case 2:
+					res += L"в живот";
+					break;
+				}
+				SendMessage(list2, LB_ADDSTRING, 0, (LPARAM)res.c_str());
+				LRESULT cur_sel2 = SendMessage(combo2, CB_GETCURSEL, 0, 0);
+				LRESULT combo2_text = SendMessage(combo2, CB_GETLBTEXT, cur_sel2, (LPARAM)str2.c_str());
+				if (kick[1] == cur_sel2)
+				{
+					SendMessage(list1, LB_ADDSTRING, 0, (LPARAM)L"Удар блокирован");
+					if (kick[0])
+					{
+						health[1] -= 5;
+						wchar_t temp[20] = L"Здоровье ", tempInt[10];
+						_itow_s(health[1], tempInt, 10);
+						wcscat_s(temp, tempInt);
+						wcscat_s(temp, L"%");
+						SendMessage(edit4, WM_SETTEXT, 0, (LPARAM)temp);
+					}
+				}
+				else
+				{
+					SendMessage(list1, LB_ADDSTRING, 0, (LPARAM)L"Удар пропущен");
+					health[0] -= kick[0] ? 15 : 10;
+					wchar_t temp[20] = L"Здоровье ", tempInt[10];
+					_itow_s(health[0], tempInt, 10);
+					wcscat_s(temp, tempInt);
+					wcscat_s(temp, L"%");
+					SendMessage(edit3, WM_SETTEXT, 0, (LPARAM)temp);
+				}
+				ShowWindow(combo1, SW_NORMAL);																								//показать верхний комбобокс
+				SendMessage(combo1, WM_SETTEXT, 0, (LPARAM)L"Чем бить?");
+				GetClientRect(hWnd, &cr);																									//узнать параметры клиенсткого окна
+				SetWindowPos(combo2, HWND_TOP, cr.right / 9 * 4, cr.bottom / 2.5, cr.right / 9, cr.bottom, SWP_SHOWWINDOW);					//сдвинуть нижний комбобокс на место
+				SendMessage(combo2, WM_SETTEXT, 0, (LPARAM)L"Куда бить?");	
+				SendMessage(button1, WM_SETTEXT, 0, (LPARAM)L"Уарить!!!");																	//изменить текс на кнопке
 			}
+		}
+
+		if (health[0] <= 0){
+			MessageBox(hWnd, L"Вы проиграли!", L"Конец игры", MB_OK);
+			PostQuitMessage(0);
+			break;
+		}
+
+		if (health[1] <= 0){
+			MessageBox(hWnd, L"Поздравляю! Вы победили!", L"Конец игры", MB_OK);
+			PostQuitMessage(0);
+			break;
 		}
 
 		break;
@@ -148,10 +245,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			L"combobox",
 			L"",
 			WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,
-			cr.right / 7,
-			cr.bottom / 5,
-			cr.right / 5,
-			cr.bottom / 2,
+			cr.right / 9 * 4,
+			cr.bottom / 8 - 5,
+			cr.right / 9,
+			cr.bottom,
 			hWnd,
 			(HMENU)ID_combo1,
 			hinst,
@@ -166,10 +263,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			L"combobox",
 			L"",
 			WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,
-			cr.right / 7,
-			cr.bottom / 2,
-			cr.right / 5,
-			cr.bottom / 2,
+			cr.right / 9 * 4,
+			cr.bottom / 2.5,
+			cr.right / 9,
+			cr.bottom,
 			hWnd,
 			(HMENU)ID_combo2,
 			hinst,
@@ -185,9 +282,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			L"button",
 			L"Ударить!!!",
 			WS_CHILD | WS_VISIBLE,
-			cr.right / 2 - 8 * 6,
-			cr.bottom - 50,
-			100,
+			cr.right / 9 * 4,
+			cr.bottom / 1.3,
+			cr.right / 9,
 			30,
 			hWnd,
 			(HMENU)ID_button1,
@@ -198,9 +295,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			L"listbox",
 			L"",
 			WS_CHILD | WS_VISIBLE | WS_VSCROLL,
-			cr.right / 7*3,
+			cr.right / 9,
 			cr.bottom / 5,
-			cr.right / 5,
+			cr.right / 9 * 2,
 			cr.bottom / 2,
 			hWnd,
 			(HMENU)ID_list1,
@@ -212,9 +309,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			L"listbox",
 			L"",
 			WS_CHILD | WS_VISIBLE | WS_VSCROLL,
-			cr.right / 7*5,
+			cr.right / 9 * 6,
 			cr.bottom / 5,
-			cr.right / 5,
+			cr.right / 9 * 2,
 			cr.bottom / 2,
 			hWnd,
 			(HMENU)ID_list1,
@@ -226,9 +323,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			L"edit",
 			L"Ваше мощное тело",
 			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 7 * 3,
+			cr.right / 9,
 			cr.bottom / 8,
-			cr.right / 5,
+			cr.right / 9 * 2,
 			20,
 			hWnd,
 			(HMENU)ID_edit1,
@@ -240,14 +337,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			L"edit",
 			L"Слабая тушка противника",
 			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 7 * 5,
+			cr.right / 9 * 6,
 			cr.bottom / 8,
-			cr.right / 5,
+			cr.right / 9 * 2,
 			20,
 			hWnd,
 			(HMENU)ID_edit2,
 			hinst,
 			NULL);
+
+		edit3 = CreateWindowEx(
+			WS_EX_CLIENTEDGE,
+			L"edit",
+			L"Здоровье 100%",
+			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+			cr.right / 9,
+			cr.bottom / 1.3 + 5,
+			cr.right / 9 * 2,
+			20,
+			hWnd,
+			(HMENU)ID_edit3,
+			hinst,
+			NULL);
+
+		edit4 = CreateWindowEx(
+			WS_EX_CLIENTEDGE,
+			L"edit",
+			L"Здоровье 100%",
+			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+			cr.right / 9 * 6,
+			cr.bottom / 1.3 + 5,
+			cr.right / 9 * 2,
+			20,
+			hWnd,
+			(HMENU)ID_edit4,
+			hinst,
+			NULL);
+
+		MessageBox(hWnd, L"Удачный удар рукой - 10%  здороья противника;\n\nУдачный удар ногой - 15%  здоровья противника;\n\nНеудачный (блокированный) удар ногой - 5%  здоровья НАПАДАЮЩЕГО.", L"Правила игры", MB_OK);
+
 		
 		break;
 
