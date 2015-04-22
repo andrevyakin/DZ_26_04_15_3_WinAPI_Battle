@@ -5,6 +5,9 @@
 #define ID_combo1 1001
 #define ID_combo2 1002
 #define ID_button1 1010
+#define ID_button2 1011
+#define ID_button3 1012
+#define ID_button4 1013
 #define ID_list1 1020
 #define ID_list2 1021
 #define ID_edit1 1030
@@ -13,15 +16,15 @@
 #define ID_edit4 1034
 
 static TCHAR WindowsClass[] = L"win32app";
-static TCHAR Title[] = L"Б  И  Т  В  А      Т  И  Т  А  Н  О  В";
+static TCHAR Title[] = L"- = Б  И  Т  В  А      Т  И  Т  А  Н  О  В = -";
 HINSTANCE hinst;
 RECT desktop, cr;
 wchar_t str1[20], str2[20], res[50], temp[20], tempInt[20];
 bool move = true;													//Чей ход
-int kick[2], block, health[2] = { 100, 100 };						//Удар, блок, здоровье
+int kick[2], block, health[2] = { 100, 100 }, repeat[3];			//Удар, блок, здоровье, повторить удар/блок
 LRESULT cur_sel, count;												//Позиция курсора, счетчик
 
-HWND combo1, combo2, button1, list1, list2, edit1, edit2, edit3, edit4;
+HWND combo1, combo2, button1, button2, button3, button4, list1, list2, edit1, edit2, edit3, edit4;
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -60,7 +63,7 @@ int WINAPI WinMain(HINSTANCE hinstance,
 		desktop.right / 4,
 		desktop.bottom / 6,
 		960,
-		540,
+		740,
 		NULL,
 		NULL,
 		hinst,
@@ -96,6 +99,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 	{
 					   //удар=====================================================================
+					   //Чем бить
 					   if (LOWORD(wParam) == ID_combo1 && HIWORD(wParam) == CBN_SELENDOK && move)
 					   {
 						   cur_sel = SendMessage(combo1, CB_GETCURSEL, 0, 0);
@@ -105,16 +109,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						   wcscpy_s(res, temp);
 						   wcscat_s(res, L". ");
 						   wcscat_s(res, str1);
-						   kick[0] = cur_sel;
+						   kick[0] = repeat[0] = cur_sel;
 					   }
-
+					   //Куда бить
 					   if (LOWORD(wParam) == ID_combo2 && HIWORD(wParam) == CBN_SELENDOK && move)
 					   {
 						   cur_sel = SendMessage(combo2, CB_GETCURSEL, 0, 0);
 						   SendMessage(combo2, CB_GETLBTEXT, cur_sel, (LPARAM)str2);
 						   wcscat_s(res, L" ");
 						   wcscat_s(res, str2);
-						   kick[1] = cur_sel;
+						   kick[1] = repeat[1] = cur_sel;
 					   }
 
 					   //Блок=====================================================================
@@ -122,13 +126,61 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					   {
 						   cur_sel = SendMessage(combo2, CB_GETCURSEL, 0, 0);
 						   SendMessage(combo2, CB_GETLBTEXT, cur_sel, (LPARAM)str2);
-						   block = cur_sel;
+						   block = repeat[2] = cur_sel;
 					   }
 	}
 
 	case BN_CLICKED:
 
-		if (LOWORD(wParam) == ID_button1 && move){
+		if (LOWORD(wParam) == ID_button2)
+		{
+			if (move)
+			{
+				_itow_s(count++, temp, 10);
+				wcscpy_s(res, temp);
+				wcscat_s(res, L". ");
+				kick[0] = repeat[0];
+				kick[0] ? wcscpy_s(str1, L"Ногой") : wcscpy_s(str1, L"Рукой");
+				wcscat_s(res, str1);
+
+				kick[1] = repeat[1];
+				switch (kick[1])
+				{
+				case 0:
+					wcscpy_s(str2, L" в голову");
+					break;
+				case 1:
+					wcscpy_s(str2, L" в грудь");
+					break;
+				case 2:
+					wcscpy_s(str2, L" в живот");
+					break;
+				}
+				wcscat_s(res, str2);
+			}
+			else
+			{
+				block = repeat[2];
+				switch (block)
+				{
+				case 0:
+					wcscpy_s(str2, L" в голову");
+					break;
+				case 1:
+					wcscpy_s(str2, L" в грудь");
+					break;
+				case 2:
+					wcscpy_s(str2, L" в живот");
+					break;
+				}
+			}
+
+			wParam = ID_button1;
+
+		}
+
+		if (LOWORD(wParam) == ID_button1 && move)
+		{
 			//Удар ==========================================================================================================================================================
 			if (move){	//Защита от дурака
 				if (str1[0] == L'\0' && str2[0] == L'\0')
@@ -209,12 +261,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					str1[0] = str2[0] = res[0] = temp[0] = tempInt[0] = '\0';
 					move = false;	//Переход хода
 					wParam = 0;		//Обнуляю wParam, чтобы вернуть управление  WM_COMMAND
+					SendMessage(button2, WM_SETTEXT, 0, (LPARAM)L"Повторить блок!");
 				}
 			}
 		}
 		//Блок==================================================================================================================
 		if (LOWORD(wParam) == ID_button1 && !move){
-			
+
 			if (str2[0] == '\0')
 				MessageBox(hWnd, L"Не выбрано что блокировать", L"Ошибка!", MB_OK);
 
@@ -298,7 +351,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SendMessage(edit3, WM_SETTEXT, 0, (LPARAM)temp);
 			}
 
-			if (str2[0] != '\0')
+			if (str2[0] != '\0' && health[0] > 0 && health[1] > 0)
 			{
 				ShowWindow(combo1, SW_NORMAL);																								//показать верхний комбобокс
 				SendMessage(combo1, WM_SETTEXT, 0, (LPARAM)L"Чем бить?");
@@ -309,12 +362,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				str1[0] = str2[0] = res[0] = temp[0] = tempInt[0] = '\0';
 				move = true;
 				wParam = 0;
+				EnableWindow(button2, TRUE);																								//активировать кнопку "Повторить"
+				SendMessage(button2, WM_SETTEXT, 0, (LPARAM)L"Повторить удар!");
 			}
-		}
+		
 
 		if (health[0] <= 0 || health[1] <= 0)
 		{
-			int Quit = MessageBox(hWnd, health[0] <= 0 ? L"Вы проиграли!\n\nХотите сыграть еще?" : L"Поздравляю! Вы победили!\n\nХотите сыграть еще?", L"Конец игры", MB_YESNO);
+			int Quit = MessageBox(hWnd, health[1] > 0 ? L"Вы проиграли!\n\nХотите сыграть еще?" : L"Поздравляю! Вы победили!\n\nХотите сыграть еще?", L"Конец игры", MB_YESNO);
 			if (Quit == IDNO)
 			{
 				PostQuitMessage(0);
@@ -322,7 +377,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			else
 			{
-				
+
 				health[0] = health[1] = 100;
 				SendMessage(list1, LB_RESETCONTENT, 0, 0);
 				SendMessage(list2, LB_RESETCONTENT, 0, 0);
@@ -334,13 +389,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SetWindowPos(combo2, HWND_TOP, cr.right / 9 * 4, cr.bottom / 2.5, cr.right / 9, cr.bottom, SWP_SHOWWINDOW);					//сдвинуть нижний комбобокс на место
 				SendMessage(combo2, WM_SETTEXT, 0, (LPARAM)L"Куда бить?");
 				SendMessage(button1, WM_SETTEXT, 0, (LPARAM)L"Ударить!!!");																	//изменить текс на кнопке
+				SendMessage(button2, WM_SETTEXT, 0, (LPARAM)L"Повторить удар!");
+				EnableWindow(button2, FALSE);
 				str1[0] = str2[0] = res[0] = temp[0] = tempInt[0] = '\0';
 				move = true;
+				count = 0;
 				wParam = 0;
+				message = WM_COMMAND;
 				break;
 			}
 		}
-		
+		}
 		break;
 
 	case WM_CREATE:
@@ -395,6 +454,47 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			30,
 			hWnd,
 			(HMENU)ID_button1,
+			hinst, NULL);
+
+		button2 = CreateWindowEx(
+			WS_EX_CLIENTEDGE,
+			L"button",
+			L"Повторить удар!",
+			WS_CHILD | WS_VISIBLE,
+			cr.right / 8,
+			cr.bottom / 1.15,
+			cr.right / 9 * 2,
+			30,
+			hWnd,
+			(HMENU)ID_button2,
+			hinst, NULL);
+
+		EnableWindow(button2, FALSE);
+
+		button3 = CreateWindowEx(
+			WS_EX_CLIENTEDGE,
+			L"button",
+			L"Правила",
+			WS_CHILD | WS_VISIBLE,
+			cr.right / 9 * 4,
+			cr.bottom / 1.15,
+			cr.right / 9,
+			30,
+			hWnd,
+			(HMENU)ID_button3,
+			hinst, NULL);
+
+		button4 = CreateWindowEx(
+			WS_EX_CLIENTEDGE,
+			L"button",
+			L"Таблица рекордов",
+			WS_CHILD | WS_VISIBLE,
+			cr.right / 9.3 * 6,
+			cr.bottom / 1.15,
+			cr.right / 9 * 2,
+			30,
+			hWnd,
+			(HMENU)ID_button4,
 			hinst, NULL);
 
 		list1 = CreateWindowEx(
