@@ -214,38 +214,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		//Блок==================================================================================================================
 		if (LOWORD(wParam) == ID_button1 && !move){
-			////Формирую удар компа
-			//kick[0] = rand() % 2;	//Чем бить
-			//kick[1] = rand() % 3;	//Куда бить
-			//
-			//count = SendMessage(list2, LB_GETCOUNT, 0, 0);
-			//_itow_s(count + 1, temp, 10);
-			//wcscpy_s(res, temp);
-			//wcscat_s(res, L". ");
-
-			////Формирую строку для окна компа (чем и куда ударил)
-			//if (kick[0])
-			//	wcscat_s (res, L"Ногой ");
-			//else
-			//	wcscat_s (res, L"Рукой ");
-
-			//switch (kick[1])
-			//{
-			//case 0:
-			//	wcscat_s (res, L"в голову");
-			//	break;
-			//case 1:
-			//	wcscat_s (res, L"в грудь");
-			//	break;
-			//case 2:
-			//	wcscat_s (res, L"в живот");
-			//	break;
-			//}
-			//SendMessage(list2, LB_ADDSTRING, 0, (LPARAM)res);
-			//SendMessage(list2, WM_VSCROLL, MAKEWPARAM(SB_BOTTOM, NULL), NULL);
-
-			////////////////////////////////////////////////////////////////////				
-
+			
 			if (str2[0] == '\0')
 				MessageBox(hWnd, L"Не выбрано что блокировать", L"Ошибка!", MB_OK);
 
@@ -343,18 +312,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		if (health[0] <= 0){
-			MessageBox(hWnd, L"Вы проиграли!", L"Конец игры", MB_OK);
-			PostQuitMessage(0);
-			break;
+		if (health[0] <= 0 || health[1] <= 0)
+		{
+			int Quit = MessageBox(hWnd, health[0] <= 0 ? L"Вы проиграли!\n\nХотите сыграть еще?" : L"Поздравляю! Вы победили!\n\nХотите сыграть еще?", L"Конец игры", MB_YESNO);
+			if (Quit == IDNO)
+			{
+				PostQuitMessage(0);
+				break;
+			}
+			else
+			{
+				
+				health[0] = health[1] = 100;
+				SendMessage(list1, LB_RESETCONTENT, 0, 0);
+				SendMessage(list2, LB_RESETCONTENT, 0, 0);
+				SendMessage(edit3, WM_SETTEXT, 0, (LPARAM)L"Здоровье 100%");
+				SendMessage(edit4, WM_SETTEXT, 0, (LPARAM)L"Здоровье 100%");
+				ShowWindow(combo1, SW_NORMAL);																								//показать верхний комбобокс
+				SendMessage(combo1, WM_SETTEXT, 0, (LPARAM)L"Чем бить?");
+				GetClientRect(hWnd, &cr);																									//узнать параметры клиенсткого окна
+				SetWindowPos(combo2, HWND_TOP, cr.right / 9 * 4, cr.bottom / 2.5, cr.right / 9, cr.bottom, SWP_SHOWWINDOW);					//сдвинуть нижний комбобокс на место
+				SendMessage(combo2, WM_SETTEXT, 0, (LPARAM)L"Куда бить?");
+				SendMessage(button1, WM_SETTEXT, 0, (LPARAM)L"Ударить!!!");																	//изменить текс на кнопке
+				str1[0] = str2[0] = res[0] = temp[0] = tempInt[0] = '\0';
+				move = true;
+				wParam = 0;
+				break;
+			}
 		}
-
-		if (health[1] <= 0){
-			MessageBox(hWnd, L"Поздравляю! Вы победили!", L"Конец игры", MB_OK);
-			PostQuitMessage(0);
-			break;
-		}
-
+		
 		break;
 
 	case WM_CREATE:
