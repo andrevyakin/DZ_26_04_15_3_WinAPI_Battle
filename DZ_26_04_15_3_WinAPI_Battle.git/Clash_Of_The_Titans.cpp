@@ -132,6 +132,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case BN_CLICKED:
 
+		if (LOWORD(wParam) == ID_button3)
+			MessageBox(hWnd, L"Удачный удар рукой - 10%  здороья противника;\n\nУдачный удар ногой - 15%  здоровья противника;\n\nНеудачный (блокированный) удар ногой - 5%  здоровья НАПАДАЮЩЕГО.", L"Правила игры", MB_OK | MB_ICONASTERISK);
+		
 		if (LOWORD(wParam) == ID_button2)
 		{
 			if (move)
@@ -184,11 +187,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			//Удар ==========================================================================================================================================================
 			if (move){	//Защита от дурака
 				if (str1[0] == L'\0' && str2[0] == L'\0')
-					MessageBox(hWnd, L"Не выбрано чем и куда бить!", L"Ошибка!", MB_OK);
+					MessageBox(hWnd, L"Не выбрано чем и куда бить!", L"Ошибка!", MB_OK | MB_ICONHAND);
 				else if (str1[0] == '\0' && str2[0] != '\0')
-					MessageBox(hWnd, L"Не выбрано чем бить!", L"Ошибка!", MB_OK);
+					MessageBox(hWnd, L"Не выбрано чем бить!", L"Ошибка!", MB_OK | MB_ICONHAND);
 				else if (str1[0] != '\0' && str2[0] == '\0')
-					MessageBox(hWnd, L"Не выбрано куда бить!", L"Ошибка!", MB_OK);
+					MessageBox(hWnd, L"Не выбрано куда бить!", L"Ошибка!", MB_OK | MB_ICONHAND);
 				else //Если все выбрано корректно
 				{
 					//Формирую строку "Чем и куда ударил" для записи в окно игрока
@@ -269,8 +272,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (LOWORD(wParam) == ID_button1 && !move){
 
 			if (str2[0] == '\0')
-				MessageBox(hWnd, L"Не выбрано что блокировать", L"Ошибка!", MB_OK);
-
+				MessageBox(hWnd, L"Не выбрано что блокировать", L"Ошибка!", MB_OK | MB_ICONHAND);
+			
 			else
 			{
 				//Формирую удар компа
@@ -580,10 +583,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			(HMENU)ID_edit4,
 			hinst,
 			NULL);
-
-		MessageBox(hWnd, L"Удачный удар рукой - 10%  здороья противника;\n\nУдачный удар ногой - 15%  здоровья противника;\n\nНеудачный (блокированный) удар ногой - 5%  здоровья НАПАДАЮЩЕГО.", L"Правила игры", MB_OK);
-
-
+				
 		break;
 
 	case WM_PAINT:
