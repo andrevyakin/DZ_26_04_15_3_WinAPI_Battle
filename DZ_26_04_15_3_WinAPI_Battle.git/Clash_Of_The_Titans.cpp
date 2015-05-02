@@ -1,6 +1,7 @@
 #include<Windows.h>
 #include<tchar.h>
 #include<ctime>
+#include <fstream>
 
 #define ID_combo1 1001
 #define ID_combo2 1002
@@ -22,12 +23,67 @@ static TCHAR WindowsClass[] = L"win32app";
 static TCHAR Title[] = L"- = Б  И  Т  В  А      Т  И  Т  А  Н  О  В = -";
 HINSTANCE hinst;
 RECT desktop, cr;
-wchar_t str1[20], str2[20], res[50], temp[20], tempInt[20], name[50];
+wchar_t str1[20], str2[20], res[50], temp[200], tempInt[20], name[50];
 bool move = true;															//Чей ход
 int kick[2], block, health[2] = { 100, 100 }, repeat[3], score[2], record;	//Удар, блок, здоровье, повторить удар/блок, счет
 LRESULT cur_sel, count;														//Позиция курсора, счетчик
 
 HWND combo1, combo2, button1, button2, button3, button4, list1, list2, edit1, edit2, edit3, edit4, edit5, edit6, edit7;
+
+class Player
+{
+public:
+	Player(){};
+	~Player(){};
+	errno_t SaveToFile()
+	{
+		wchar_t arr[300];
+		wchar_t temp[20];
+		wcscpy_s(arr, sizeof (name), name);
+		wcscat_s(arr, sizeof(L" "), L" ");
+		_itow_s(score, temp, 10);
+		wcscat_s(arr, sizeof(temp), temp);
+		wcscat_s(arr, sizeof(L" "), L" ");
+		_itow_s(record, temp, 10);
+		wcscat_s(arr, sizeof(temp), temp);
+		wcscat_s(arr, sizeof(L"\n"), L"\n");
+
+		FILE* file;
+		errno_t err;
+		err = _wfopen_s(&file, L"record.txt", L"a");
+
+		if (!err)
+		{
+			fputws(arr, file);
+
+			fclose(file);
+		}
+		return err;
+	}
+	errno_t ReadFromFile()
+	{}
+
+	void SetName(wchar_t * _name)
+	{
+		wcscpy_s(name, sizeof(_name), _name);
+	}
+
+	void SetScore(int * _score)
+	{
+		score = _score[0] + _score[1];
+	}
+
+	void SetRecord(int _record)
+	{
+		record = _record;
+	}
+
+private:
+	wchar_t name[51];
+	int score;
+	int record;
+};
+
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -142,7 +198,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			MessageBox(hWnd, L"Удачный удар рукой - 10%  здороья противника;\n\nУдачный удар ногой - 15%  здоровья противника;\n\nНеудачный (блокированный) удар ногой - 5%  здоровья НАПАДАЮЩЕГО.", L"Правила игры", MB_OK | MB_ICONASTERISK);
 
 		if (LOWORD(wParam) == ID_button4)
-			MessageBox(hWnd, L"В стадии разработки...", L"Таблица рекордов", MB_OK | MB_ICONASTERISK);
+
+
+
+			MessageBox(hWnd, L"", L"Таблица рекордов", MB_OK | MB_ICONASTERISK);
 
 		if (LOWORD(wParam) == ID_button2)
 		{
@@ -199,8 +258,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 			}
 			else
+			{
+				Player Name;
+				Name.SetName(name);
 				SendMessage(edit5, EM_SETREADONLY, TRUE, 0);
-
+			}
 			//Удар ==========================================================================================================================================================
 			if (move){	//Защита от дурака
 				if (str1[0] == L'\0' && str2[0] == L'\0')
@@ -273,6 +335,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 						SendMessage(list2, WM_VSCROLL, MAKEWPARAM(SB_BOTTOM, NULL), NULL);
 						health[1] -= kick[0] ? 15 : 10;
 						record += kick[0] ? 15 : 10;
+						Player Record;
+						Record.SetRecord(record);
 						wcscpy_s(temp, L"Здоровье ");
 						_itow_s(health[1], tempInt, 10);
 						wcscat_s(temp, tempInt);
@@ -396,12 +460,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SendMessage(button2, WM_SETTEXT, 0, (LPARAM)L"Повторить удар!");
 			}
 
-
-			if (health[0] <= 0 || health[1] <= 0)
+			if (health[0] <= 0 || health[1] <= 0)																							//Конец игры
 			{
 				int Quit = MessageBox(hWnd, health[1] > 0 ? L"Вы проиграли!\n\nХотите сыграть еще?" : L"Поздравляю! Вы победили!\n\nХотите сыграть еще?", L"Конец игры", MB_YESNO);
 				if (Quit == IDNO)
 				{
+					Player Save;
+					Save.SaveToFile();
 					PostQuitMessage(0);
 					break;
 				}
@@ -420,6 +485,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					SendMessage(button2, WM_SETTEXT, 0, (LPARAM)L"Повторить удар!");
 					EnableWindow(button2, FALSE);
 					health[1] > 0 ? score[1]++ : score[0]++;
+					Player Score;
+					Score.SetScore(score);
 					_itow_s(score[0], temp, 10);
 					_itow_s(score[1], tempInt, 10);
 					wcscpy_s(res, L"Счет ");
@@ -440,228 +507,228 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 
 	case WM_CREATE:
+	{
+					  GetClientRect(hWnd, &cr);
 
-		GetClientRect(hWnd, &cr);
+					  combo1 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"combobox",
+						  L"",
+						  WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,
+						  cr.right / 9 * 4,
+						  cr.bottom / 5,
+						  cr.right / 9,
+						  cr.bottom,
+						  hWnd,
+						  (HMENU)ID_combo1,
+						  hinst,
+						  NULL);
 
-		combo1 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"combobox",
-			L"",
-			WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,
-			cr.right / 9 * 4,
-			cr.bottom / 5,
-			cr.right / 9,
-			cr.bottom,
-			hWnd,
-			(HMENU)ID_combo1,
-			hinst,
-			NULL);
+					  SendMessage(combo1, WM_SETTEXT, 0, (LPARAM)L"Чем бить?");
+					  SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)L"Рукой ");
+					  SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)L"Ногой ");
 
-		SendMessage(combo1, WM_SETTEXT, 0, (LPARAM)L"Чем бить?");
-		SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)L"Рукой ");
-		SendMessage(combo1, CB_ADDSTRING, 0, (LPARAM)L"Ногой ");
+					  combo2 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"combobox",
+						  L"",
+						  WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,
+						  cr.right / 9 * 4,
+						  cr.bottom / 2.5,
+						  cr.right / 9,
+						  cr.bottom,
+						  hWnd,
+						  (HMENU)ID_combo2,
+						  hinst,
+						  NULL);
 
-		combo2 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"combobox",
-			L"",
-			WS_CHILD | WS_VISIBLE | CBS_DROPDOWN,
-			cr.right / 9 * 4,
-			cr.bottom / 2.5,
-			cr.right / 9,
-			cr.bottom,
-			hWnd,
-			(HMENU)ID_combo2,
-			hinst,
-			NULL);
+					  SendMessage(combo2, WM_SETTEXT, 0, (LPARAM)L"Куда бить?");
+					  SendMessage(combo2, CB_ADDSTRING, 0, (LPARAM)L"в голову");
+					  SendMessage(combo2, CB_ADDSTRING, 0, (LPARAM)L"в грудь");
+					  SendMessage(combo2, CB_ADDSTRING, 0, (LPARAM)L"в живот");
 
-		SendMessage(combo2, WM_SETTEXT, 0, (LPARAM)L"Куда бить?");
-		SendMessage(combo2, CB_ADDSTRING, 0, (LPARAM)L"в голову");
-		SendMessage(combo2, CB_ADDSTRING, 0, (LPARAM)L"в грудь");
-		SendMessage(combo2, CB_ADDSTRING, 0, (LPARAM)L"в живот");
+					  button1 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"button",
+						  L"Ударить!!!",
+						  WS_CHILD | WS_VISIBLE,
+						  cr.right / 9 * 4,
+						  cr.bottom / 1.3,
+						  cr.right / 9,
+						  30,
+						  hWnd,
+						  (HMENU)ID_button1,
+						  hinst, NULL);
 
-		button1 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"button",
-			L"Ударить!!!",
-			WS_CHILD | WS_VISIBLE,
-			cr.right / 9 * 4,
-			cr.bottom / 1.3,
-			cr.right / 9,
-			30,
-			hWnd,
-			(HMENU)ID_button1,
-			hinst, NULL);
+					  button2 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"button",
+						  L"Повторить удар!",
+						  WS_CHILD | WS_VISIBLE,
+						  cr.right / 8,
+						  cr.bottom / 1.15,
+						  cr.right / 9 * 2,
+						  30,
+						  hWnd,
+						  (HMENU)ID_button2,
+						  hinst, NULL);
 
-		button2 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"button",
-			L"Повторить удар!",
-			WS_CHILD | WS_VISIBLE,
-			cr.right / 8,
-			cr.bottom / 1.15,
-			cr.right / 9 * 2,
-			30,
-			hWnd,
-			(HMENU)ID_button2,
-			hinst, NULL);
+					  EnableWindow(button2, FALSE);
 
-		EnableWindow(button2, FALSE);
+					  button3 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"button",
+						  L"Правила",
+						  WS_CHILD | WS_VISIBLE,
+						  cr.right / 9 * 4,
+						  cr.bottom / 1.15,
+						  cr.right / 9,
+						  30,
+						  hWnd,
+						  (HMENU)ID_button3,
+						  hinst, NULL);
 
-		button3 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"button",
-			L"Правила",
-			WS_CHILD | WS_VISIBLE,
-			cr.right / 9 * 4,
-			cr.bottom / 1.15,
-			cr.right / 9,
-			30,
-			hWnd,
-			(HMENU)ID_button3,
-			hinst, NULL);
+					  button4 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"button",
+						  L"Таблица рекордов",
+						  WS_CHILD | WS_VISIBLE,
+						  cr.right / 9.3 * 6,
+						  cr.bottom / 1.15,
+						  cr.right / 9 * 2,
+						  30,
+						  hWnd,
+						  (HMENU)ID_button4,
+						  hinst, NULL);
 
-		button4 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"button",
-			L"Таблица рекордов",
-			WS_CHILD | WS_VISIBLE,
-			cr.right / 9.3 * 6,
-			cr.bottom / 1.15,
-			cr.right / 9 * 2,
-			30,
-			hWnd,
-			(HMENU)ID_button4,
-			hinst, NULL);
+					  list1 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"listbox",
+						  L"",
+						  WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_READONLY,
+						  cr.right / 12,
+						  cr.bottom / 5,
+						  cr.right / 6.5 * 2,
+						  cr.bottom / 2,
+						  hWnd,
+						  (HMENU)ID_list1,
+						  hinst,
+						  NULL);
 
-		list1 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"listbox",
-			L"",
-			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_READONLY,
-			cr.right / 12,
-			cr.bottom / 5,
-			cr.right / 6.5 * 2,
-			cr.bottom / 2,
-			hWnd,
-			(HMENU)ID_list1,
-			hinst,
-			NULL);
+					  list2 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"listbox",
+						  L"",
+						  WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_READONLY,
+						  cr.right / 10 * 6,
+						  cr.bottom / 5,
+						  cr.right / 8 * 2.5,
+						  cr.bottom / 2,
+						  hWnd,
+						  (HMENU)ID_list1,
+						  hinst,
+						  NULL);
 
-		list2 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"listbox",
-			L"",
-			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_READONLY,
-			cr.right / 10 * 6,
-			cr.bottom / 5,
-			cr.right / 8 * 2.5,
-			cr.bottom / 2,
-			hWnd,
-			(HMENU)ID_list1,
-			hinst,
-			NULL);
+					  edit1 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"edit",
+						  L"Ваше мощное тело",
+						  WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+						  cr.right / 8,
+						  cr.bottom / 8,
+						  cr.right / 9 * 2,
+						  20,
+						  hWnd,
+						  (HMENU)ID_edit1,
+						  hinst,
+						  NULL);
 
-		edit1 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"edit",
-			L"Ваше мощное тело",
-			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 8,
-			cr.bottom / 8,
-			cr.right / 9 * 2,
-			20,
-			hWnd,
-			(HMENU)ID_edit1,
-			hinst,
-			NULL);
+					  edit2 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"edit",
+						  L"Хилая тушка противника",
+						  WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+						  cr.right / 9.3 * 6,
+						  cr.bottom / 8,
+						  cr.right / 9 * 2,
+						  20,
+						  hWnd,
+						  (HMENU)ID_edit2,
+						  hinst,
+						  NULL);
 
-		edit2 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"edit",
-			L"Хилая тушка противника",
-			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 9.3 * 6,
-			cr.bottom / 8,
-			cr.right / 9 * 2,
-			20,
-			hWnd,
-			(HMENU)ID_edit2,
-			hinst,
-			NULL);
+					  edit3 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"edit",
+						  L"Здоровье 100%",
+						  WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+						  cr.right / 8,
+						  cr.bottom / 1.3 + 5,
+						  cr.right / 9 * 2,
+						  20,
+						  hWnd,
+						  (HMENU)ID_edit3,
+						  hinst,
+						  NULL);
 
-		edit3 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"edit",
-			L"Здоровье 100%",
-			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 8,
-			cr.bottom / 1.3 + 5,
-			cr.right / 9 * 2,
-			20,
-			hWnd,
-			(HMENU)ID_edit3,
-			hinst,
-			NULL);
+					  edit4 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"edit",
+						  L"Здоровье 100%",
+						  WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+						  cr.right / 9.3 * 6,
+						  cr.bottom / 1.3 + 5,
+						  cr.right / 9 * 2,
+						  20,
+						  hWnd,
+						  (HMENU)ID_edit4,
+						  hinst,
+						  NULL);
 
-		edit4 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"edit",
-			L"Здоровье 100%",
-			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 9.3 * 6,
-			cr.bottom / 1.3 + 5,
-			cr.right / 9 * 2,
-			20,
-			hWnd,
-			(HMENU)ID_edit4,
-			hinst,
-			NULL);
+					  edit5 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"edit",
+						  L"Введите имя игрока",
+						  WS_CHILD | WS_VISIBLE | ES_CENTER,
+						  cr.right / 8,
+						  cr.bottom / 14,
+						  cr.right / 9 * 2,
+						  20,
+						  hWnd,
+						  (HMENU)ID_edit5,
+						  hinst,
+						  NULL);
 
-		edit5 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"edit",
-			L"Введите имя игрока",
-			WS_CHILD | WS_VISIBLE | ES_CENTER,
-			cr.right / 8,
-			cr.bottom / 14,
-			cr.right / 9 * 2,
-			20,
-			hWnd,
-			(HMENU)ID_edit5,
-			hinst,
-			NULL);
+					  edit6 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"edit",
+						  L"Ваш рекорд: 0",
+						  WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+						  cr.right / 9.3 * 6,
+						  cr.bottom / 14,
+						  cr.right / 9 * 2,
+						  20,
+						  hWnd,
+						  (HMENU)ID_edit6,
+						  hinst,
+						  NULL);
 
-		edit6 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"edit",
-			L"Ваш рекорд: 0",
-			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 9.3 * 6,
-			cr.bottom / 14,
-			cr.right / 9 * 2,
-			20,
-			hWnd,
-			(HMENU)ID_edit6,
-			hinst,
-			NULL);
+					  edit7 = CreateWindowEx(
+						  WS_EX_CLIENTEDGE,
+						  L"edit",
+						  L"Счет 0 : 0",
+						  WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
+						  cr.right / 9 * 4,
+						  cr.bottom / 14,
+						  cr.right / 9,
+						  20,
+						  hWnd,
+						  (HMENU)ID_edit6,
+						  hinst,
+						  NULL);
 
-		edit7 = CreateWindowEx(
-			WS_EX_CLIENTEDGE,
-			L"edit",
-			L"Счет 0 : 0",
-			WS_CHILD | WS_VISIBLE | ES_CENTER | ES_READONLY,
-			cr.right / 9 * 4,
-			cr.bottom / 14,
-			cr.right / 9,
-			20,
-			hWnd,
-			(HMENU)ID_edit6,
-			hinst,
-			NULL);
-
-		break;
-
+					  break;
+	}
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 		EndPaint(hWnd, &ps);
